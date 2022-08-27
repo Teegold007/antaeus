@@ -2,7 +2,10 @@ package io.pleo.antaeus.core.services
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import io.pleo.antaeus.core.exceptions.InvoiceNotFoundException
+import io.pleo.antaeus.core.utils.createInvoice
+import io.pleo.antaeus.core.utils.createInvoices
 import io.pleo.antaeus.core.utils.createMoney
 import io.pleo.antaeus.data.AntaeusDal
 import io.pleo.antaeus.models.Currency
@@ -16,25 +19,13 @@ import org.junit.jupiter.api.assertThrows
 import kotlin.random.Random
 
 class InvoiceServiceTest {
-    private val invoices = List(size = 4) {
-        Invoice(
-            id = Random.nextInt(),
-            amount = createMoney(),
-            customerId = Random.nextInt(),
-            status = InvoiceStatus.PENDING
-        )
-    }
+    private val invoices = createInvoices(InvoiceStatus.PENDING);
 
-    private val invoice = Invoice(
-        id = Random.nextInt(),
-        customerId = Random.nextInt(),
-        amount = createMoney(),
-        status = InvoiceStatus.PAID
-    );
+    private val paidInvoice = createInvoice(InvoiceStatus.PAID)
 
     private val dal = mockk<AntaeusDal> {
         every { fetchInvoice(404) } returns null
-        every { fetchInvoice(any()) } returns invoice
+        every { fetchInvoice(any()) } returns paidInvoice
         every { fetchInvoices() } returns invoices
         every { fetchInvoicesByStatus("PENDING") } returns invoices
     }
@@ -58,6 +49,13 @@ class InvoiceServiceTest {
     @Test
     fun `will fetch invoices by status`() {
         val invoices = invoiceService.fetchByStatus("PENDING")
-        assertTrue(invoices.size==4);
+        assertTrue(invoices.size==5);
+    }
+
+    @Test
+    fun `update invoice status`(){
+        every { dal.updateInvoiceStatus(1,InvoiceStatus.PAID.toString()) } returns paidInvoice
+        invoiceService.updateStatus(1,InvoiceStatus.PAID.toString())
+        verify(exactly=1) { dal.updateInvoiceStatus(1,InvoiceStatus.PAID.toString())}
     }
 }
