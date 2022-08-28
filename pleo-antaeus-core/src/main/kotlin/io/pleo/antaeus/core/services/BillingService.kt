@@ -26,10 +26,7 @@ class BillingService(
         invoices.forEach{
             billingScope.launch {
                val billingFlow = processInvoice(it)
-                billingFlow.collect{
-                    val result = it
-                    logger.info { result }
-                }
+                billingFlow.collect()
                 }
             }
         return invoiceService.fetchByStatus(InvoiceStatus.PAID.toString())
@@ -40,10 +37,7 @@ class BillingService(
             invoices.forEach{
                 billingScope.launch {
                     val billingFlow = processInvoice(it)
-                    billingFlow.collect{
-                        val result = it
-                        logger.info { result }
-                    }
+                    billingFlow.collect()
                 }
             }
         }
@@ -56,10 +50,7 @@ class BillingService(
         billingScope.launch {
             if(invoice.status != InvoiceStatus.PAID){
                 val billingFlow = processInvoice(invoice)
-                billingFlow.collect{
-                    val result = it
-                    logger.info { result }
-                }
+                billingFlow.collect()
             }
         }
         return invoice;
@@ -67,19 +58,19 @@ class BillingService(
 
     private fun processInvoice(invoice : Invoice) : Flow<Result<Boolean>> {
         return flow {
-            val charge = paymentProvider.charge(invoice)
-            when(charge){
+            val paymentProviderResponse = paymentProvider.charge(invoice)
+            when(paymentProviderResponse){
                 true -> { invoiceService.updateStatus(invoice.id, InvoiceStatus.PAID.toString()) }
                 false -> {
                     //you can send a notification to the user to Fund Account
                     sendFundAccountNotification(invoice.customerId);
                     invoiceService.updateStatus(invoice.id, InvoiceStatus.UNPAID.toString()) }
             }
-            emit(Result.success(charge))
+            emit(Result.success(paymentProviderResponse))
         }.retryWhen { cause, attempt ->
             if (cause is NetworkException && attempt < maxRetries.toInt()) {
                 //A monitoring metrics can be added here
-                logger.error ("Unable to bill invoice due to network exception message : ",cause)
+                logger.error ("retrying to charge invoice ")
                 return@retryWhen true
             } else if(cause is CustomerNotFoundException) {
                 //Report this to the proper channel by creating a ticket on jira or use Datadog
