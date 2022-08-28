@@ -19,7 +19,7 @@ class BillingService(
     private val billingScope = CoroutineScope(Dispatchers.IO)
 
 
-    private val maxRetries = System.getenv("maxRetries").toInt() ?: 3
+    private val maxRetries : String = System.getenv("MAX_RETRIES") ?: "3";
 
     fun billPendingInvoices(): List<Invoice> {
         val invoices = invoiceService.fetchByStatus("PENDING")
@@ -77,7 +77,7 @@ class BillingService(
             }
             emit(Result.success(charge))
         }.retryWhen { cause, attempt ->
-            if (cause is NetworkException && attempt < maxRetries) {
+            if (cause is NetworkException && attempt < maxRetries.toInt()) {
                 //A monitoring metrics can be added here
                 logger.error ("Unable to bill invoice due to network exception message : ",cause)
                 return@retryWhen true

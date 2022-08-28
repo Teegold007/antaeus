@@ -35,6 +35,7 @@ class BillingServiceTest {
         val paymentProvider = mockk<PaymentProvider> { every { charge(any()) } returns true }
         val billingService = BillingService(paymentProvider, invoiceService)
         val result = billingService.billInvoice(invoice.id)
+        //invoice billing execute asynchronously
         Thread.sleep(20)
         verify(exactly = 1) { invoiceService.updateStatus(result.id, InvoiceStatus.PAID.toString()) }
     }
@@ -79,7 +80,7 @@ class BillingServiceTest {
         val paymentProvider = mockk<PaymentProvider> { every { charge(any()) } throws CurrencyMismatchException(1, 1) }
         val billingService = BillingService(paymentProvider, invoiceService)
         billingService.billPendingInvoices()
-        Thread.sleep(10)
+        Thread.sleep(20)
 
         assertThrows<CurrencyMismatchException> {
             paymentProvider.charge(pendingInvoices[1])
@@ -95,7 +96,7 @@ class BillingServiceTest {
         val paymentProvider = mockk<PaymentProvider> { every { charge(any()) } throws CustomerNotFoundException(1) }
         val billingService = BillingService(paymentProvider, invoiceService)
         billingService.billPendingInvoices()
-        Thread.sleep(10)
+        Thread.sleep(20)
         assertThrows<CustomerNotFoundException> {
             paymentProvider.charge(pendingInvoices[1])
         }
@@ -109,7 +110,7 @@ class BillingServiceTest {
         val paymentProvider = mockk<PaymentProvider> { every { charge(any()) } throws NetworkException() }
         val billingService = BillingService(paymentProvider, invoiceService)
         billingService.billPendingInvoices()
-        Thread.sleep(30)
+        Thread.sleep(20)
         assertThrows<NetworkException> {
             paymentProvider.charge(pendingInvoices[1])
         }

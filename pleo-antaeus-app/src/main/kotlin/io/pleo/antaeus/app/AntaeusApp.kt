@@ -8,6 +8,7 @@
 package io.pleo.antaeus.app
 
 import getPaymentProvider
+import io.pleo.antaeus.core.config.BillingSchedulerConfig
 import io.pleo.antaeus.core.services.BillingService
 import io.pleo.antaeus.core.services.CustomerService
 import io.pleo.antaeus.core.services.InvoiceService
@@ -62,6 +63,11 @@ fun main() {
 
     // This is _your_ billing service to be included where you see fit
     val billingService = BillingService(paymentProvider = paymentProvider,invoiceService = invoiceService)
+
+    val invoiceBillingCronExpression : String = System.getenv("INVOICE_BILLING_CRON") ?: "0 0 0 1 1/1 ? *"
+
+    // initialize billing scheduler job
+    BillingSchedulerConfig().initialize(billingService,invoiceBillingCronExpression)
 
     // Create REST web service
     AntaeusRest(
